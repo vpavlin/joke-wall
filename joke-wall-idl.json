@@ -12,8 +12,14 @@
           "init": true,
           "pda": {
             "seeds": [
-              { "kind": "const", "value": "session_v1" },
-              { "kind": "account", "path": "admin" }
+              {
+                "kind": "const",
+                "value": "session_v1"
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
             ]
           }
         },
@@ -25,7 +31,10 @@
         }
       ],
       "args": [
-        { "name": "description", "type": "string" }
+        {
+          "name": "description",
+          "type": "string"
+        }
       ]
     },
     {
@@ -38,8 +47,14 @@
           "init": false,
           "pda": {
             "seeds": [
-              { "kind": "const", "value": "session_v1" },
-              { "kind": "account", "path": "admin" }
+              {
+                "kind": "const",
+                "value": "session_v1"
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
             ]
           }
         },
@@ -57,7 +72,10 @@
         }
       ],
       "args": [
-        { "name": "content", "type": "string" }
+        {
+          "name": "content",
+          "type": "string"
+        }
       ]
     },
     {
@@ -70,8 +88,14 @@
           "init": false,
           "pda": {
             "seeds": [
-              { "kind": "const", "value": "session_v1" },
-              { "kind": "account", "path": "admin" }
+              {
+                "kind": "const",
+                "value": "session_v1"
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
             ]
           }
         },
@@ -89,7 +113,10 @@
         }
       ],
       "args": [
-        { "name": "joke_index", "type": "u64" }
+        {
+          "name": "joke_index",
+          "type": "u64"
+        }
       ]
     },
     {
@@ -102,8 +129,14 @@
           "init": false,
           "pda": {
             "seeds": [
-              { "kind": "const", "value": "session_v1" },
-              { "kind": "account", "path": "admin" }
+              {
+                "kind": "const",
+                "value": "session_v1"
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
             ]
           }
         },
@@ -126,8 +159,14 @@
           "init": false,
           "pda": {
             "seeds": [
-              { "kind": "const", "value": "session_v1" },
-              { "kind": "account", "path": "admin" }
+              {
+                "kind": "const",
+                "value": "session_v1"
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
             ]
           }
         },
@@ -147,23 +186,58 @@
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "admin", "type": { "array": ["u8", 32] } },
-          { "name": "description", "type": "string" },
-          { "name": "is_active", "type": "bool" },
-          { "name": "jokes", "type": { "vec": { "defined": "JokeEntry" } } }
+          {
+            "name": "admin",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "jokes",
+            "type": {
+              "vec": {
+                "defined": "JokeEntry"
+              }
+            }
+          }
         ]
       }
-    },
+    }
+  ],
+  "types": [
     {
       "name": "JokeEntry",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          { "name": "submitter", "type": { "array": ["u8", 32] } },
-          { "name": "content", "type": "string" },
-          { "name": "vote_count", "type": "u64" }
-        ]
-      }
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "submitter",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "content",
+          "type": "string"
+        },
+        {
+          "name": "vote_count",
+          "type": "u64"
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,20 @@
+{
+  "name": "joke_wall",
+  "version": "0.1.0",
+  "description": "Community joke voting — submit jokes, vote for the funniest",
+  "type": "ui",
+  "category": "demo",
+  "main": "libjoke_wall_plugin",
+  "view": "qml/Main.qml",
+  "nix": {
+    "packages": {
+      "runtime": ["qt6.qtdeclarative", "qt6.qtwayland"]
+    },
+    "external_libraries": [
+      {
+        "name": "joke_wall_ffi",
+        "vendor_path": "lib"
+      }
+    ]
+  }
+}

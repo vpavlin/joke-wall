@@ -1,0 +1,15 @@
+{
+  "author": "Logos / SPEL demo",
+  "category": "demo",
+  "dependencies": [],
+  "description": "Community joke voting — submit jokes, vote for the funniest",
+  "icon": "",
+  "main": {
+    "linux-amd64-dev": "libjoke_wall_plugin.so",
+    "linux-x86_64-dev": "libjoke_wall_plugin.so"
+  },
+  "manifestVersion": "0.1.0",
+  "name": "joke_wall",
+  "type": "ui",
+  "version": "0.1.0"
+}
