@@ -1,0 +1,169 @@
+{
+  "version": "0.1.0",
+  "name": "joke_wall",
+  "instructions": [
+    {
+      "name": "create_session",
+      "accounts": [
+        {
+          "name": "session",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": "session_v1" },
+              { "kind": "account", "path": "admin" }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": false,
+          "signer": true,
+          "init": false
+        }
+      ],
+      "args": [
+        { "name": "description", "type": "string" }
+      ]
+    },
+    {
+      "name": "submit_joke",
+      "accounts": [
+        {
+          "name": "session",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": "session_v1" },
+              { "kind": "account", "path": "admin" }
+            ]
+          }
+        },
+        {
+          "name": "submitter",
+          "writable": false,
+          "signer": true,
+          "init": false
+        },
+        {
+          "name": "admin",
+          "writable": false,
+          "signer": false,
+          "init": false
+        }
+      ],
+      "args": [
+        { "name": "content", "type": "string" }
+      ]
+    },
+    {
+      "name": "vote",
+      "accounts": [
+        {
+          "name": "session",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": "session_v1" },
+              { "kind": "account", "path": "admin" }
+            ]
+          }
+        },
+        {
+          "name": "voter",
+          "writable": false,
+          "signer": true,
+          "init": false
+        },
+        {
+          "name": "admin",
+          "writable": false,
+          "signer": false,
+          "init": false
+        }
+      ],
+      "args": [
+        { "name": "joke_index", "type": "u64" }
+      ]
+    },
+    {
+      "name": "close_session",
+      "accounts": [
+        {
+          "name": "session",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": "session_v1" },
+              { "kind": "account", "path": "admin" }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": false,
+          "signer": true,
+          "init": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "reveal",
+      "accounts": [
+        {
+          "name": "session",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": "session_v1" },
+              { "kind": "account", "path": "admin" }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": false,
+          "signer": false,
+          "init": false
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "SessionState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "admin", "type": { "array": ["u8", 32] } },
+          { "name": "description", "type": "string" },
+          { "name": "is_active", "type": "bool" },
+          { "name": "jokes", "type": { "vec": { "defined": "JokeEntry" } } }
+        ]
+      }
+    },
+    {
+      "name": "JokeEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "submitter", "type": { "array": ["u8", 32] } },
+          { "name": "content", "type": "string" },
+          { "name": "vote_count", "type": "u64" }
+        ]
+      }
+    }
+  ]
+}
