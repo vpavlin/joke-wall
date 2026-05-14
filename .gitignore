@@ -1,1 +1,10 @@
 .scaffold
+target/
+methods/guest/target/
+ui/ffi/target/
+ui/build/
+result
+result-*
+*.lgx
+.joke_wall-state
+.joke_wall-state.tmp
