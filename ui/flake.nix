@@ -43,13 +43,11 @@
         '';
 
         # ── LEZ source (nssa build.rs artifacts) ──────────────────────────────
-        # Must match the nssa tag used in ui/ffi/Cargo.toml (v0.2.0-rc3).
-        # Run `nix-prefetch-git --url https://github.com/logos-blockchain/logos-execution-zone.git \
-        #   --rev cf3639d8252040d13b3d4e933feb19b42c76e14a` to get the sha256.
+        # Matches nssa tag v0.2.0-rc1 pinned in ui/ffi/Cargo.lock.
         lezSrc = pkgs.fetchgit {
           url = "https://github.com/logos-blockchain/logos-execution-zone.git";
-          rev = "cf3639d8252040d13b3d4e933feb19b42c76e14a";
-          hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; # UPDATE ME
+          rev = "35d8df0d031315219f94d1546ceb862b0e5b208f";
+          hash = "sha256-j0DzDvH88IUIReYi6N4FD6+mTIJOklQjaa9qjw4yHEg=";
         };
 
         # ── Rust FFI cdylib ────────────────────────────────────────────────────
@@ -61,13 +59,11 @@
           cargoLock = {
             lockFile = ./ffi/Cargo.lock;
             outputHashes = {
-              # Update these hashes after running `cargo build --release` in ui/ffi/
-              # to generate ui/ffi/Cargo.lock, then re-run `nix build .#ffi`.
-              "amm_core-0.1.0"                          = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-              "jf-crhf-0.1.1"                           = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-              "jf-poseidon2-0.1.0"                      = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-              "logos-blockchain-blend-crypto-0.1.2"     = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-              "overwatch-0.1.0"                         = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+              "amm_core-0.1.0"                          = "sha256-j0DzDvH88IUIReYi6N4FD6+mTIJOklQjaa9qjw4yHEg=";
+              "jf-crhf-0.1.1"                           = "sha256-TUm91XROmUfqwFqkDmQEKyT9cOo1ZgAbuTDyEfe6ltg=";
+              "jf-poseidon2-0.1.0"                      = "sha256-QeCjgZXO7lFzF2Gzm2f8XI08djm5jyKI6D8U0jNTPB8=";
+              "logos-blockchain-blend-crypto-0.1.2"     = "sha256-ypgXXvAUR4WbXGaOhoPy9AqTyYjqtIUye/Uyr1RF030=";
+              "overwatch-0.1.0"                         = "sha256-L7R1GdhRNNsymYe3RVyYLAmd6x1YY08TBJp4hG4/YwE=";
             };
           };
 

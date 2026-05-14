@@ -18,6 +18,8 @@ class JokeWallBackend : public QObject {
     Q_PROPERTY(QVariantList jokes         READ jokes         NOTIFY jokesChanged)
     Q_PROPERTY(bool         sessionExists READ sessionExists NOTIFY sessionExistsChanged)
     Q_PROPERTY(bool         busy          READ busy          NOTIFY busyChanged)
+    Q_PROPERTY(bool         polling       READ polling       NOTIFY pollingChanged)
+    Q_PROPERTY(QString      adminId       READ adminId       NOTIFY adminIdChanged)
     Q_PROPERTY(QString      lastError     READ lastError     NOTIFY lastErrorChanged)
     Q_PROPERTY(QString      lastTxHash    READ lastTxHash    NOTIFY lastTxHashChanged)
 
@@ -31,6 +33,8 @@ public:
     QVariantList jokes()         const { return m_jokes; }
     bool         sessionExists() const { return m_sessionExists; }
     bool         busy()          const { return m_busy; }
+    bool         polling()       const { return m_polling; }
+    QString      adminId()       const { return m_adminAccountId; }
     QString      lastError()     const { return m_lastError; }
     QString      lastTxHash()    const { return m_lastTxHash; }
 
@@ -41,6 +45,8 @@ public:
                           int jokeIndex);
     Q_INVOKABLE void closeSession(const QString& adminAccountId);
     Q_INVOKABLE void refreshState();
+    Q_INVOKABLE void setAdminId(const QString& adminAccountId);
+    Q_INVOKABLE void setSessionPda(const QString& sessionPda);
 
 signals:
     void descriptionChanged();
@@ -49,6 +55,8 @@ signals:
     void jokesChanged();
     void sessionExistsChanged();
     void busyChanged();
+    void pollingChanged();
+    void adminIdChanged();
     void lastErrorChanged();
     void lastTxHashChanged();
     void txSuccess(const QString& operation, const QString& txHash);
@@ -63,6 +71,8 @@ private:
     QString m_walletPath;
     QString m_sequencerUrl;
     QString m_programIdHex;
+    QString m_adminAccountId;
+    QString m_sessionPda;
 
     QString      m_description;
     bool         m_isActive      = false;
@@ -70,6 +80,7 @@ private:
     QVariantList m_jokes;
     bool         m_sessionExists = false;
     bool         m_busy          = false;
+    bool         m_polling       = false;
     QString      m_lastError;
     QString      m_lastTxHash;
 

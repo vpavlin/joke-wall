@@ -14,8 +14,8 @@ use joke_wall_core::JokeEntry;
 use serde::{Serialize, Deserialize};
 use serde_json::{Value, json};
 use nssa::{AccountId, ProgramId, PublicTransaction};
-use nssa::program_methods::Program;
 use nssa::public_transaction::{Message, WitnessSet};
+use sha2::{Sha256, Digest};
 use sequencer_service_rpc::RpcClient as _;
 use wallet::WalletCore;
 
@@ -94,15 +94,22 @@ fn init_wallet(v: &Value) -> Result<WalletCore, String> {
     WalletCore::from_env().map_err(|e| format!("wallet init: {}", e))
 }
 
-/// Compute the session PDA from program_id and the "session_v1" literal seed.
-fn compute_session_pda(program_id: &ProgramId) -> AccountId {
-    let seed = nssa_core::program::PdaSeed::new({
-        let mut b = [0u8; 32];
-        let prefix = b"session_v1";
-        b[..prefix.len()].copy_from_slice(prefix);
-        b
-    });
-    AccountId::from((program_id, &seed))
+/// Compute the session PDA.
+/// On-chain: `pda = [literal("session_v1"), account("admin")]`
+/// spel-framework combines multiple seeds as SHA-256(seed1 || seed2).
+fn compute_session_pda(program_id: &ProgramId, admin: &AccountId) -> AccountId {
+    let mut literal_seed = [0u8; 32];
+    literal_seed[..10].copy_from_slice(b"session_v1");
+
+    let admin_seed: [u8; 32] = *admin.value();
+
+    let mut hasher = Sha256::new();
+    hasher.update(literal_seed);
+    hasher.update(admin_seed);
+    let combined: [u8; 32] = hasher.finalize().into();
+
+    let pda_seed = nssa_core::program::PdaSeed::new(combined);
+    AccountId::from((program_id, &pda_seed))
 }
 
 fn submit_tx(
@@ -168,7 +175,7 @@ fn create_session_impl(args: &str) -> Result<String, String> {
     let wallet = init_wallet(&v)?;
     let admin = parse_account_id(v["admin"].as_str().ok_or("missing admin")?)?;
     let description = v["description"].as_str().ok_or("missing description")?.to_string();
-    let session = compute_session_pda(&program_id);
+    let session = compute_session_pda(&program_id, &admin);
     let tx_hash = submit_tx(&wallet, program_id,
         vec![session, admin], vec![admin],
         JokeWallInstruction::CreateSession { description })?;
@@ -191,7 +198,7 @@ fn submit_joke_impl(args: &str) -> Result<String, String> {
     let admin = parse_account_id(v["admin"].as_str().ok_or("missing admin")?)?;
     let submitter = parse_account_id(v["submitter"].as_str().ok_or("missing submitter")?)?;
     let content = v["content"].as_str().ok_or("missing content")?.to_string();
-    let session = compute_session_pda(&program_id);
+    let session = compute_session_pda(&program_id, &admin);
     let tx_hash = submit_tx(&wallet, program_id,
         vec![session, submitter, admin], vec![submitter],
         JokeWallInstruction::SubmitJoke { content })?;
@@ -217,7 +224,7 @@ fn vote_impl(args: &str) -> Result<String, String> {
         .as_str().and_then(|s| s.parse().ok())
         .or_else(|| v["joke_index"].as_u64())
         .ok_or("missing or invalid joke_index")?;
-    let session = compute_session_pda(&program_id);
+    let session = compute_session_pda(&program_id, &admin);
     let tx_hash = submit_tx(&wallet, program_id,
         vec![session, voter, admin], vec![voter],
         JokeWallInstruction::Vote { joke_index })?;
@@ -238,7 +245,7 @@ fn close_session_impl(args: &str) -> Result<String, String> {
     let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
     let wallet = init_wallet(&v)?;
     let admin = parse_account_id(v["admin"].as_str().ok_or("missing admin")?)?;
-    let session = compute_session_pda(&program_id);
+    let session = compute_session_pda(&program_id, &admin);
     let tx_hash = submit_tx(&wallet, program_id,
         vec![session, admin], vec![admin],
         JokeWallInstruction::CloseSession)?;
@@ -259,7 +266,13 @@ fn fetch_state_impl(args: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(args).map_err(|e| format!("invalid JSON: {}", e))?;
     let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
     let wallet = init_wallet(&v)?;
-    let session_pda = compute_session_pda(&program_id);
+    // Accept either a direct session_pda or derive it from admin.
+    let session_pda = if let Some(pda) = v["session_pda"].as_str() {
+        parse_account_id(pda)?
+    } else {
+        let admin = parse_account_id(v["admin"].as_str().ok_or("missing session_pda or admin")?)?;
+        compute_session_pda(&program_id, &admin)
+    };
 
     let rt = tokio::runtime::Runtime::new().map_err(|e| format!("tokio: {}", e))?;
     let state = rt.block_on(async {
@@ -268,9 +281,28 @@ fn fetch_state_impl(args: &str) -> Result<String, String> {
             .get_account(session_pda)
             .await
             .map_err(|e| format!("get_account: {}", e))?;
+        // An empty account means the session PDA has not been created yet.
+        if account.data.is_empty() {
+            return Ok(None);
+        }
         SessionState::try_from_slice(&account.data)
+            .map(Some)
             .map_err(|e| format!("borsh decode: {}", e))
     })?;
+
+    // Session doesn't exist yet — return a clean empty state so the UI shows "no session".
+    let Some(state) = state else {
+        return Ok(json!({
+            "success": true,
+            "state": {
+                "admin":       "",
+                "description": "",
+                "is_active":   false,
+                "joke_count":  0,
+                "jokes":       [],
+            }
+        }).to_string());
+    };
 
     let jokes: Vec<Value> = state.jokes.iter().enumerate().map(|(i, j)| {
         json!({

@@ -220,35 +220,43 @@ Rectangle {
                                         Layout.fillWidth: true
                                         height: jokeRow.implicitHeight + 20
                                         radius: 8
-                                        color: root.colBg
-                                        border.color: root.colBorder
+                                        color: modelData.rank === 1 && modelData.vote_count > 0
+                                               ? root.colPrimary + "18" : root.colBg
+                                        border.color: modelData.rank === 1 && modelData.vote_count > 0
+                                               ? root.colPrimary + "88" : root.colBorder
 
                                         RowLayout {
                                             id: jokeRow
                                             anchors { fill: parent; margins: 10 }
                                             spacing: 10
 
-                                            // Vote count badge
+                                            // Rank + vote count badge
                                             Rectangle {
                                                 width: 46
                                                 height: 46
                                                 radius: 8
-                                                color: root.colPrimary + "22"
-                                                border.color: root.colPrimary + "66"
+                                                color: modelData.rank === 1 && modelData.vote_count > 0 ? root.colPrimary
+                                                     : modelData.rank === 2 && modelData.vote_count > 0 ? root.colPrimary + "88"
+                                                     : modelData.rank === 3 && modelData.vote_count > 0 ? root.colPrimary + "55"
+                                                     : root.colPrimary + "22"
+                                                border.color: "transparent"
                                                 ColumnLayout {
                                                     anchors.centerIn: parent
                                                     spacing: 0
                                                     Label {
                                                         Layout.alignment: Qt.AlignHCenter
-                                                        text: modelData.vote_count
-                                                        color: root.colPrimary
-                                                        font { pixelSize: 16; bold: true }
+                                                        text: modelData.rank === 1 && modelData.vote_count > 0 ? "🥇"
+                                                            : modelData.rank === 2 && modelData.vote_count > 0 ? "🥈"
+                                                            : modelData.rank === 3 && modelData.vote_count > 0 ? "🥉"
+                                                            : "#" + modelData.rank
+                                                        color: "#fff"
+                                                        font { pixelSize: modelData.rank <= 3 && modelData.vote_count > 0 ? 18 : 12; bold: true }
                                                     }
                                                     Label {
                                                         Layout.alignment: Qt.AlignHCenter
-                                                        text: "votes"
-                                                        color: root.colMuted
-                                                        font.pixelSize: 9
+                                                        text: modelData.vote_count + " votes"
+                                                        color: modelData.rank === 1 && modelData.vote_count > 0 ? "#fff" : root.colMuted
+                                                        font.pixelSize: 8
                                                     }
                                                 }
                                             }
@@ -302,25 +310,65 @@ Rectangle {
                                     }
                                 }
 
-                                // Voter credentials (used by Vote buttons above)
+                                // Watch session + voter credentials
                                 Rectangle {
                                     Layout.fillWidth: true
                                     height: voterForm.implicitHeight + 16
                                     radius: 8
                                     color: root.colSurface
                                     border.color: root.colBorder
-                                    visible: backend.sessionExists
 
                                     ColumnLayout {
                                         id: voterForm
                                         anchors { fill: parent; margins: 8 }
                                         spacing: 6
                                         Label {
-                                            text: "Voter credentials"
+                                            text: "Session & voter"
                                             color: root.colMuted
                                             font { pixelSize: 11; capitalization: Font.AllUppercase; letterSpacing: 1 }
                                         }
-                                        JwTextField { id: voteAdmin;  placeholderText: "Admin account ID" }
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 6
+                                            JwTextField {
+                                                id: watchAdmin
+                                                Layout.fillWidth: true
+                                                placeholderText: "Session PDA (base58)"
+                                            }
+                                            Rectangle {
+                                                width: 56; height: 36
+                                                radius: 6
+                                                color: watchAdmin.text !== "" ? root.colPrimary : root.colBorder
+                                                Behavior on color { ColorAnimation { duration: 100 } }
+                                                Label {
+                                                    anchors.centerIn: parent
+                                                    text: "Watch"
+                                                    color: "#fff"
+                                                    font.pixelSize: 11
+                                                    visible: !backend.polling
+                                                }
+                                                BusyIndicator {
+                                                    anchors.centerIn: parent
+                                                    width: 20; height: 20
+                                                    running: backend.polling
+                                                    visible: backend.polling
+                                                    palette.dark: "#fff"
+                                                }
+                                                MouseArea {
+                                                    anchors.fill: parent
+                                                    enabled: watchAdmin.text !== "" && !backend.polling
+                                                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                                    onClicked: backend.setSessionPda(watchAdmin.text.trim())
+                                                }
+                                            }
+                                        }
+                                        Label {
+                                            visible: backend.adminId !== ""
+                                            text: "Watching: " + backend.adminId.substring(0, 16) + "…"
+                                            color: root.colSuccess
+                                            font.pixelSize: 11
+                                        }
+                                        JwTextField { id: voteAdmin;  placeholderText: "Admin account ID (to compute session PDA for voting)" }
                                         JwTextField { id: voteVoter; placeholderText: "Your account ID (voter)" }
                                     }
                                 }
@@ -416,19 +464,21 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
-            visible: backend.busy || backend.lastError !== "" || backend.lastTxHash !== ""
 
             BusyIndicator {
                 width: 20; height: 20
-                running: backend.busy
-                visible: backend.busy
+                running: backend.busy || backend.polling
+                visible: backend.busy || backend.polling
                 palette.dark: root.colPrimary
             }
 
             Label {
-                text: backend.busy           ? "Submitting…"
+                text: backend.busy             ? "Submitting…"
+                    : backend.polling          ? "Fetching…"
                     : backend.lastError !== "" ? "Error: " + backend.lastError
-                    : "OK — " + backend.lastTxHash.substring(0, 16) + "…"
+                    : backend.lastTxHash !== "" ? "OK — " + backend.lastTxHash.substring(0, 16) + "…"
+                    : backend.adminId !== ""   ? "Watching: " + backend.adminId.substring(0, 24) + "…"
+                    : "Ready"
                 color: backend.lastError !== "" ? root.colError : root.colMuted
                 font.pixelSize: 12
                 Layout.fillWidth: true

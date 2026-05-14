@@ -93,14 +93,31 @@ void JokeWallBackend::applyStateJson(const QJsonObject& s) {
     int     jokeCount   = static_cast<int>(s.value("joke_count").toDouble(0));
     bool    exists      = !s.value("admin").toString().isEmpty();
 
-    QVariantList jokes;
+    // Collect then sort descending by vote_count
+    struct JokeItem { int index; QString content; int vote_count; QString submitter; };
+    QList<JokeItem> raw;
     for (const auto& jv : s.value("jokes").toArray()) {
         QJsonObject jo = jv.toObject();
+        raw.append({
+            jo.value("index").toInt(),
+            jo.value("content").toString(),
+            static_cast<int>(jo.value("vote_count").toDouble(0)),
+            jo.value("submitter").toString().left(12) + "…",
+        });
+    }
+    std::stable_sort(raw.begin(), raw.end(), [](const JokeItem& a, const JokeItem& b) {
+        return a.vote_count > b.vote_count;
+    });
+
+    QVariantList jokes;
+    int rank = 1;
+    for (const auto& j : raw) {
         jokes << QVariantMap{
-            {"index",      jo.value("index").toInt()},
-            {"content",    jo.value("content").toString()},
-            {"vote_count", static_cast<int>(jo.value("vote_count").toDouble(0))},
-            {"submitter",  jo.value("submitter").toString().left(12) + "…"},
+            {"index",      j.index},
+            {"content",    j.content},
+            {"vote_count", j.vote_count},
+            {"submitter",  j.submitter},
+            {"rank",       rank++},
         };
     }
 
@@ -114,9 +131,23 @@ void JokeWallBackend::applyStateJson(const QJsonObject& s) {
 
 // ── Public invokables ─────────────────────────────────────────────────────────
 
+void JokeWallBackend::setAdminId(const QString& adminAccountId) {
+    m_adminAccountId = adminAccountId.trimmed();
+    emit adminIdChanged();
+    if (m_programIdHex.isEmpty()) {
+        m_lastError = "JOKE_WALL_PROGRAM_ID_HEX env var not set — cannot fetch state";
+        emit lastErrorChanged();
+        return;
+    }
+    m_lastError.clear();
+    emit lastErrorChanged();
+    QTimer::singleShot(0, this, &JokeWallBackend::refreshState);
+}
+
 void JokeWallBackend::createSession(const QString& adminAccountId, const QString& description) {
+    m_adminAccountId = adminAccountId.trimmed();
     QJsonObject args = baseArgs();
-    args["admin"]       = adminAccountId;
+    args["admin"]       = m_adminAccountId;
     args["description"] = description;
     dispatchFfi("create_session", [args]() {
         return callFfiRaw(joke_wall_create_session, args);
@@ -126,8 +157,9 @@ void JokeWallBackend::createSession(const QString& adminAccountId, const QString
 void JokeWallBackend::submitJoke(const QString& adminAccountId,
                                   const QString& submitterAccountId,
                                   const QString& content) {
+    m_adminAccountId = adminAccountId.trimmed();
     QJsonObject args = baseArgs();
-    args["admin"]     = adminAccountId;
+    args["admin"]     = m_adminAccountId;
     args["submitter"] = submitterAccountId;
     args["content"]   = content;
     dispatchFfi("submit_joke", [args]() {
@@ -138,8 +170,9 @@ void JokeWallBackend::submitJoke(const QString& adminAccountId,
 void JokeWallBackend::vote(const QString& adminAccountId,
                             const QString& voterAccountId,
                             int jokeIndex) {
+    m_adminAccountId = adminAccountId.trimmed();
     QJsonObject args = baseArgs();
-    args["admin"]      = adminAccountId;
+    args["admin"]      = m_adminAccountId;
     args["voter"]      = voterAccountId;
     args["joke_index"] = jokeIndex;
     dispatchFfi("vote", [args]() {
@@ -148,19 +181,43 @@ void JokeWallBackend::vote(const QString& adminAccountId,
 }
 
 void JokeWallBackend::closeSession(const QString& adminAccountId) {
+    m_adminAccountId = adminAccountId.trimmed();
     QJsonObject args = baseArgs();
-    args["admin"] = adminAccountId;
+    args["admin"] = m_adminAccountId;
     dispatchFfi("close_session", [args]() {
         return callFfiRaw(joke_wall_close_session, args);
     });
 }
 
+void JokeWallBackend::setSessionPda(const QString& sessionPda) {
+    m_sessionPda = sessionPda.trimmed();
+    m_adminAccountId = m_sessionPda; // so adminId property shows something
+    emit adminIdChanged();
+    if (m_programIdHex.isEmpty()) {
+        m_lastError = "JOKE_WALL_PROGRAM_ID_HEX env var not set — cannot fetch state";
+        emit lastErrorChanged();
+        return;
+    }
+    m_lastError.clear();
+    emit lastErrorChanged();
+    QTimer::singleShot(0, this, &JokeWallBackend::refreshState);
+}
+
 void JokeWallBackend::refreshState() {
-    if (m_programIdHex.isEmpty() || m_busy) return;
+    if (m_programIdHex.isEmpty() || (m_adminAccountId.isEmpty() && m_sessionPda.isEmpty()) || m_busy || m_polling) return;
     QJsonObject args = baseArgs();
+    if (!m_sessionPda.isEmpty()) {
+        args["session_pda"] = m_sessionPda;
+    } else {
+        args["admin"] = m_adminAccountId;
+    }
+    m_polling = true;
+    emit pollingChanged();
     QThreadPool::globalInstance()->start([this, args]() {
         QString result = callFfiRaw(joke_wall_fetch_state_json, args);
         QMetaObject::invokeMethod(this, [this, result]() {
+            m_polling = false;
+            emit pollingChanged();
             QJsonObject obj = QJsonDocument::fromJson(result.toUtf8()).object();
             if (obj.value("success").toBool() && obj.contains("state")) {
                 m_lastError.clear();
