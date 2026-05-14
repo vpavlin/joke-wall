@@ -9,8 +9,14 @@
 
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use borsh::BorshDeserialize;
-use joke_wall_core::JokeEntry;
+use borsh::{BorshDeserialize, BorshSerialize};
+
+#[derive(Debug, Clone, Default, BorshSerialize, BorshDeserialize)]
+struct JokeEntry {
+    pub submitter: [u8; 32],
+    pub content: String,
+    pub vote_count: u64,
+}
 use serde::{Serialize, Deserialize};
 use serde_json::{Value, json};
 use nssa::{AccountId, ProgramId, PublicTransaction};

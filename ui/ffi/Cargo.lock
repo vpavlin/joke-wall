@@ -3079,21 +3079,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "joke_wall_core"
-version = "0.1.0"
-dependencies = [
- "borsh",
- "serde",
-]
-
-[[package]]
 name = "joke_wall_ffi"
 version = "0.1.0"
 dependencies = [
  "borsh",
  "common",
  "hex",
- "joke_wall_core",
  "nssa",
  "nssa_core",
  "sequencer_service_rpc",

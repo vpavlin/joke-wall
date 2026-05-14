@@ -62,7 +62,7 @@
               "amm_core-0.1.0"                          = "sha256-j0DzDvH88IUIReYi6N4FD6+mTIJOklQjaa9qjw4yHEg=";
               "jf-crhf-0.1.1"                           = "sha256-TUm91XROmUfqwFqkDmQEKyT9cOo1ZgAbuTDyEfe6ltg=";
               "jf-poseidon2-0.1.0"                      = "sha256-QeCjgZXO7lFzF2Gzm2f8XI08djm5jyKI6D8U0jNTPB8=";
-              "logos-blockchain-blend-crypto-0.1.2"     = "sha256-ypgXXvAUR4WbXGaOhoPy9AqTyYjqtIUye/Uyr1RF030=";
+              "logos-blockchain-blend-crypto-0.1.2"     = "sha256-WvB8m5/RaKUqDjuV40v2sfahSbQKYtSMm5O94Pzic1c=";
               "overwatch-0.1.0"                         = "sha256-L7R1GdhRNNsymYe3RVyYLAmd6x1YY08TBJp4hG4/YwE=";
             };
           };
