@@ -331,6 +331,57 @@ fn fetch_state_impl(args: &str) -> Result<String, String> {
     }).to_string())
 }
 
+// ── generate_account ─────────────────────────────────────────────────────────
+// Creates a new HD-derived public account in the wallet and returns its ID.
+// Args: { wallet_path, sequencer_url }
+
+#[no_mangle]
+pub extern "C" fn joke_wall_generate_account(args_json: *const c_char) -> *mut c_char {
+    let args = match cstr_to_str(args_json) { Ok(s) => s.to_owned(), Err(e) => return error_json(&e) };
+    ffi_call(move || generate_account_impl(&args))
+}
+
+fn find_wallet_bin() -> Result<String, String> {
+    if let Ok(out) = std::process::Command::new("which").arg("wallet").output() {
+        if out.status.success() {
+            let p = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !p.is_empty() { return Ok(p); }
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        let p = format!("{}/.cargo/bin/wallet", home);
+        if std::path::Path::new(&p).exists() { return Ok(p); }
+    }
+    Err("wallet binary not found on PATH or ~/.cargo/bin/".into())
+}
+
+fn generate_account_impl(args: &str) -> Result<String, String> {
+    let v: Value = serde_json::from_str(args).map_err(|e| format!("invalid JSON: {}", e))?;
+    let wallet_bin = find_wallet_bin()?;
+
+    let mut cmd = std::process::Command::new(&wallet_bin);
+    cmd.args(["account", "new", "public"]);
+    if let Some(p) = v["wallet_path"].as_str() {
+        cmd.env("NSSA_WALLET_HOME_DIR", p);
+    }
+
+    let out = cmd.output().map_err(|e| format!("exec wallet: {}", e))?;
+    if !out.status.success() {
+        return Err(format!("wallet: {}", String::from_utf8_lossy(&out.stderr)));
+    }
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    // Output: "Generated new account with account_id Public/XYZ at path /N"
+    let account_id = stdout.lines()
+        .find(|l| l.contains("account_id"))
+        .and_then(|l| l.split("Public/").nth(1))
+        .and_then(|s| s.split_whitespace().next())
+        .map(|s| format!("Public/{}", s))
+        .ok_or_else(|| format!("could not parse account ID from wallet output: {}", stdout))?;
+
+    Ok(json!({"success": true, "account_id": account_id}).to_string())
+}
+
 // ── utility ───────────────────────────────────────────────────────────────────
 
 #[no_mangle]
