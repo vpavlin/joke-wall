@@ -328,29 +328,21 @@ Rectangle {
                                         anchors { fill: parent; margins: 10 }
                                         spacing: 10
 
+                                        // Rank badge
                                         Rectangle {
-                                            width: 44; height: 44; radius: 8
+                                            width: 36; height: 36; radius: 8
                                             color: modelData.rank === 1 && modelData.vote_count > 0 ? root.colPrimary
                                                  : modelData.rank === 2 && modelData.vote_count > 0 ? root.colPrimary + "88"
                                                  : modelData.rank === 3 && modelData.vote_count > 0 ? root.colPrimary + "55"
                                                  : root.colPrimary + "22"
-                                            ColumnLayout {
-                                                anchors.centerIn: parent; spacing: 0
-                                                Label {
-                                                    Layout.alignment: Qt.AlignHCenter
-                                                    text: modelData.rank === 1 && modelData.vote_count > 0 ? "🥇"
-                                                        : modelData.rank === 2 && modelData.vote_count > 0 ? "🥈"
-                                                        : modelData.rank === 3 && modelData.vote_count > 0 ? "🥉"
-                                                        : "#" + modelData.rank
-                                                    color: "#fff"
-                                                    font { pixelSize: modelData.rank <= 3 && modelData.vote_count > 0 ? 16 : 11; bold: true }
-                                                }
-                                                Label {
-                                                    Layout.alignment: Qt.AlignHCenter
-                                                    text: modelData.vote_count + " votes"
-                                                    color: modelData.rank === 1 && modelData.vote_count > 0 ? "#fff" : root.colMuted
-                                                    font.pixelSize: 8
-                                                }
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: modelData.rank === 1 && modelData.vote_count > 0 ? "🥇"
+                                                    : modelData.rank === 2 && modelData.vote_count > 0 ? "🥈"
+                                                    : modelData.rank === 3 && modelData.vote_count > 0 ? "🥉"
+                                                    : "#" + modelData.rank
+                                                color: "#fff"
+                                                font { pixelSize: modelData.rank <= 3 && modelData.vote_count > 0 ? 16 : 11; bold: true }
                                             }
                                         }
 
@@ -366,6 +358,23 @@ Rectangle {
                                             Label {
                                                 text: "#" + modelData.index + " · " + modelData.submitter
                                                 color: root.colMuted; font.pixelSize: 10
+                                            }
+                                        }
+
+                                        // Vote count
+                                        ColumnLayout {
+                                            spacing: 2
+                                            Layout.alignment: Qt.AlignVCenter
+                                            Label {
+                                                Layout.alignment: Qt.AlignHCenter
+                                                text: modelData.vote_count
+                                                color: modelData.vote_count > 0 ? root.colPrimary : root.colMuted
+                                                font { pixelSize: 18; bold: modelData.vote_count > 0 }
+                                            }
+                                            Label {
+                                                Layout.alignment: Qt.AlignHCenter
+                                                text: "votes"
+                                                color: root.colMuted; font.pixelSize: 9
                                             }
                                         }
 
