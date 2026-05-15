@@ -133,10 +133,14 @@ void JokeWallBackend::handleFfiResult(const QString& operation, const QString& r
 }
 
 void JokeWallBackend::applyStateJson(const QJsonObject& s) {
-    QString description = s.value("description").toString();
-    bool    isActive    = s.value("is_active").toBool();
-    int     jokeCount   = static_cast<int>(s.value("joke_count").toDouble(0));
-    bool    exists      = !s.value("admin").toString().isEmpty();
+    QString description   = s.value("description").toString();
+    QString adminHex      = s.value("admin_hex").toString();
+    bool    isActive      = s.value("is_active").toBool();
+    int     jokeCount     = static_cast<int>(s.value("joke_count").toDouble(0));
+    bool    exists        = !s.value("admin").toString().isEmpty();
+
+    if (!adminHex.isEmpty())
+        m_sessionAdminHex = adminHex;
 
     struct JokeItem { int index; QString content; int vote_count; QString submitter; };
     QList<JokeItem> raw;
@@ -299,11 +303,12 @@ void JokeWallBackend::selectSession(const QString& pda) {
     saveSettings();
 
     // Reset displayed state immediately
-    m_description = ""; emit descriptionChanged();
-    m_isActive = false;  emit isActiveChanged();
-    m_jokeCount = 0;     emit jokeCountChanged();
+    m_description = "";     emit descriptionChanged();
+    m_sessionAdminHex = "";
+    m_isActive = false;     emit isActiveChanged();
+    m_jokeCount = 0;        emit jokeCountChanged();
     m_sessionExists = false; emit sessionExistsChanged();
-    m_jokes.clear();     emit jokesChanged();
+    m_jokes.clear();        emit jokesChanged();
 
     QTimer::singleShot(0, this, &JokeWallBackend::refreshState);
 }
@@ -321,12 +326,19 @@ void JokeWallBackend::createSession(const QString& description) {
 }
 
 void JokeWallBackend::submitJoke(const QString& content) {
-    if (m_adminId.isEmpty() || m_submitterId.isEmpty()) {
-        m_lastError = "Admin and submitter accounts required";
+    if (m_submitterId.isEmpty()) {
+        m_lastError = "Submitter account required — generate one in the Accounts tab";
+        emit lastErrorChanged(); return;
+    }
+    if (m_adminId.isEmpty() && m_sessionAdminHex.isEmpty()) {
+        m_lastError = "Session admin not loaded yet — wait for state to refresh";
         emit lastErrorChanged(); return;
     }
     QJsonObject args = baseArgs();
-    args["admin"]     = m_adminId;
+    if (!m_adminId.isEmpty())
+        args["admin"]     = m_adminId;
+    else
+        args["admin_hex"] = m_sessionAdminHex;
     args["submitter"] = m_submitterId;
     args["content"]   = content;
     dispatchFfi("submit_joke", [args]() {
@@ -335,12 +347,19 @@ void JokeWallBackend::submitJoke(const QString& content) {
 }
 
 void JokeWallBackend::vote(int jokeIndex) {
-    if (m_adminId.isEmpty() || m_voterId.isEmpty()) {
-        m_lastError = "Admin and voter accounts required";
+    if (m_voterId.isEmpty()) {
+        m_lastError = "Voter account required — generate one in the Accounts tab";
+        emit lastErrorChanged(); return;
+    }
+    if (m_adminId.isEmpty() && m_sessionAdminHex.isEmpty()) {
+        m_lastError = "Session admin not loaded yet — wait for state to refresh";
         emit lastErrorChanged(); return;
     }
     QJsonObject args = baseArgs();
-    args["admin"]      = m_adminId;
+    if (!m_adminId.isEmpty())
+        args["admin"]     = m_adminId;
+    else
+        args["admin_hex"] = m_sessionAdminHex;
     args["voter"]      = m_voterId;
     args["joke_index"] = jokeIndex;
     dispatchFfi("vote", [args]() {

@@ -108,6 +108,7 @@ private:
     QVariantList m_sessions;
 
     QString      m_description;
+    QString      m_sessionAdminHex;  // admin bytes from session state (hex), for submit/vote
     bool         m_isActive      = false;
     int          m_jokeCount     = 0;
     QVariantList m_jokes;

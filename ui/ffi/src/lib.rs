@@ -90,6 +90,26 @@ fn parse_account_id(s: &str) -> Result<AccountId, String> {
     base58.parse().map_err(|_| format!("invalid AccountId: {}", s))
 }
 
+/// Parse a 32-byte account ID from raw bytes, returning base58 AccountId.
+fn account_id_from_bytes(bytes: &[u8; 32]) -> Result<AccountId, String> {
+    let b58 = bs58::encode(bytes).into_string();
+    b58.parse().map_err(|_| format!("could not construct AccountId from bytes"))
+}
+
+/// Parse admin from args: accepts base58 "Public/..." via "admin" key,
+/// or 64-hex-char raw bytes via "admin_hex" key (from session state).
+fn parse_admin_from_args(v: &Value) -> Result<AccountId, String> {
+    if let Some(s) = v["admin"].as_str() {
+        return parse_account_id(s);
+    }
+    if let Some(s) = v["admin_hex"].as_str() {
+        let bytes = hex::decode(s).map_err(|e| format!("invalid admin_hex: {}", e))?;
+        let arr: [u8; 32] = bytes.try_into().map_err(|_| "admin_hex must be 32 bytes".to_string())?;
+        return account_id_from_bytes(&arr);
+    }
+    Err("missing admin or admin_hex".to_string())
+}
+
 fn init_wallet(v: &Value) -> Result<WalletCore, String> {
     if let Some(p) = v["wallet_path"].as_str() {
         std::env::set_var("NSSA_WALLET_HOME_DIR", p);
@@ -201,7 +221,7 @@ fn submit_joke_impl(args: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(args).map_err(|e| format!("invalid JSON: {}", e))?;
     let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
     let wallet = init_wallet(&v)?;
-    let admin = parse_account_id(v["admin"].as_str().ok_or("missing admin")?)?;
+    let admin = parse_admin_from_args(&v)?;
     let submitter = parse_account_id(v["submitter"].as_str().ok_or("missing submitter")?)?;
     let content = v["content"].as_str().ok_or("missing content")?.to_string();
     let session = compute_session_pda(&program_id, &admin);
@@ -224,7 +244,7 @@ fn vote_impl(args: &str) -> Result<String, String> {
     let v: Value = serde_json::from_str(args).map_err(|e| format!("invalid JSON: {}", e))?;
     let program_id = parse_program_id_hex(v["program_id_hex"].as_str().ok_or("missing program_id_hex")?)?;
     let wallet = init_wallet(&v)?;
-    let admin = parse_account_id(v["admin"].as_str().ok_or("missing admin")?)?;
+    let admin = parse_admin_from_args(&v)?;
     let voter = parse_account_id(v["voter"].as_str().ok_or("missing voter")?)?;
     let joke_index: u64 = v["joke_index"]
         .as_str().and_then(|s| s.parse().ok())
@@ -322,11 +342,12 @@ fn fetch_state_impl(args: &str) -> Result<String, String> {
     Ok(json!({
         "success": true,
         "state": {
-            "admin":       hex::encode(state.admin),
-            "description": state.description,
-            "is_active":   state.is_active,
-            "joke_count":  state.jokes.len(),
-            "jokes":       jokes,
+            "admin":        hex::encode(state.admin),
+            "admin_hex":    hex::encode(state.admin),
+            "description":  state.description,
+            "is_active":    state.is_active,
+            "joke_count":   state.jokes.len(),
+            "jokes":        jokes,
         }
     }).to_string())
 }
