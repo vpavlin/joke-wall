@@ -337,7 +337,11 @@ The `submit_joke` and `vote` instructions accept an `admin` account (not a signe
 
 `ui/ffi/src/lib.rs` is compiled as a `cdylib` and exports six C functions. Each accepts a JSON string and returns a JSON string (caller must free with `joke_wall_free_string`). This lets Qt's C++ layer call into Rust via `dlopen`/`dlsym` without a C++ Rust bridge.
 
-> **Note:** The FFI was written by hand — there is no `spel generate-ffi` command (only `spel generate-idl` exists). The pattern of JSON-in/JSON-out over C strings was borrowed from the [whisper-wall](https://github.com/logos-co/whisper-wall) project, which established this approach for SPEL Basecamp plugins.
+> **Note:** The SPEL toolchain includes a code generator, `spel-client-gen`, that can produce this FFI automatically from the IDL JSON. In this project the FFI was written by hand (following the pattern established by [whisper-wall](https://github.com/logos-co/whisper-wall)), but future projects should prefer the generator:
+> ```bash
+> cargo run -p spel-client-gen -- --idl joke-wall-idl.json --out-dir ui/ffi/src/generated/
+> ```
+> The generator produces the same JSON-in/JSON-out `extern "C"` pattern plus a typed Rust client and a C header.
 
 The FFI spawns a Tokio runtime per call to handle the async sequencer RPC. Account generation calls the `wallet` binary as a subprocess since the wallet crate doesn't expose a stable Rust API for HD derivation.
 
