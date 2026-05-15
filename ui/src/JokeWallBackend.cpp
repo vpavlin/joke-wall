@@ -335,10 +335,7 @@ void JokeWallBackend::submitJoke(const QString& content) {
         emit lastErrorChanged(); return;
     }
     QJsonObject args = baseArgs();
-    if (!m_adminId.isEmpty())
-        args["admin"]     = m_adminId;
-    else
-        args["admin_hex"] = m_sessionAdminHex;
+    args["admin"]     = m_adminId.isEmpty() ? m_sessionAdminHex : m_adminId;
     args["submitter"] = m_submitterId;
     args["content"]   = content;
     dispatchFfi("submit_joke", [args]() {
@@ -356,11 +353,8 @@ void JokeWallBackend::vote(int jokeIndex) {
         emit lastErrorChanged(); return;
     }
     QJsonObject args = baseArgs();
-    if (!m_adminId.isEmpty())
-        args["admin"]     = m_adminId;
-    else
-        args["admin_hex"] = m_sessionAdminHex;
-    args["voter"]      = m_voterId;
+    args["admin"]  = m_adminId.isEmpty() ? m_sessionAdminHex : m_adminId;
+    args["voter"]  = m_voterId;
     args["joke_index"] = jokeIndex;
     dispatchFfi("vote", [args]() {
         return callFfiRaw(joke_wall_vote, args);
